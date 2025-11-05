@@ -265,6 +265,14 @@ src/
 - Prefer dependency injection over static methods
 - Use decorators for metadata and cross-cutting concerns
 
+## Package Manager
+- This project uses **yarn** as the package manager
+- Always use `yarn` commands instead of `npm`:
+  - `yarn add <package>` for installing dependencies
+  - `yarn add -D <package>` for installing dev dependencies
+  - `yarn install` for installing all dependencies
+  - `yarn remove <package>` for removing packages
+
 ## File Organization
 - Group related files in feature folders
 - Keep test files next to source files (`.spec.ts` alongside `.ts`)
