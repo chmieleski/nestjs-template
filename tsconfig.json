@@ -27,5 +27,12 @@
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "commitlint.config.js",
+    ".czrc",
+    ".lintstagedrc.json"
+  ]
 }
