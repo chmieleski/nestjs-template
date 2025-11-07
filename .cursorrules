@@ -82,22 +82,25 @@ You are working on a NestJS v11 TypeScript backend application with strict typin
 ## NestJS Specific Guidelines
 
 ### Architecture Principles
-- Use modular architecture - each feature domain gets its own module
+- Use modular architecture - each feature domain gets its own module under `modules/`
 - Encapsulate API endpoints in feature modules:
-  - One module per main domain/route
+  - One module per main domain/route under `modules/[feature]/`
   - One controller per route (with additional controllers for sub-routes)
-  - Models folder containing:
+  - DTOs folder containing:
     - DTOs validated with class-validator for inputs
     - Simple types/interfaces for outputs
-  - Services folder containing:
+  - Services folder containing (if needed):
     - Business logic and data persistence
-    - Entities (if using MikroORM/TypeORM)
     - One service per entity/domain aggregate
+  - Entities folder (if applicable):
+    - Database entities (if using MikroORM/TypeORM)
 - Core module for NestJS artifacts:
+  - Configuration module with environment variable validation
   - Global exception filters for consistent error handling
   - Global guards for authentication/authorization
   - Global interceptors for cross-cutting concerns (logging, transformation, etc.)
   - Global pipes for validation and transformation
+  - Logger service and module (located in `modules/logger/`)
 - Shared module for reusable services and utilities:
   - Common business logic shared across modules
   - Utility functions and helpers
@@ -107,6 +110,11 @@ You are working on a NestJS v11 TypeScript backend application with strict typin
 ```
 src/
 ├── core/                    # Core NestJS artifacts
+│   ├── config/             # Configuration module
+│   │   ├── config.schema.ts    # Environment variables schema with validation
+│   │   ├── config.service.ts   # Type-safe ConfigService with getters
+│   │   ├── config.module.ts    # ConfigModule setup
+│   │   └── index.ts            # Exports
 │   ├── filters/            # Exception filters
 │   ├── guards/             # Authentication/authorization guards
 │   ├── interceptors/       # Request/response interceptors
@@ -116,15 +124,17 @@ src/
 │   ├── services/           # Shared business services
 │   ├── utils/              # Utility functions
 │   └── types/              # Shared types and interfaces
-└── [feature]/              # Feature modules
-    ├── [feature].module.ts
-    ├── [feature].controller.ts
-    ├── [feature].service.ts
-    ├── dto/                # Data Transfer Objects
-    │   ├── create-[feature].dto.ts
-    │   ├── update-[feature].dto.ts
-    │   └── [feature]-response.dto.ts
-    └── entities/           # Database entities (if applicable)
+└── modules/                 # Feature modules
+    ├── logger/             # Logger service and module (core infrastructure)
+    └── [feature]/          # Feature module
+        ├── [feature].module.ts
+        ├── [feature].controller.ts
+        ├── [feature].service.ts
+        ├── dto/            # Data Transfer Objects
+        │   ├── create-[feature].dto.ts
+        │   ├── update-[feature].dto.ts
+        │   └── [feature]-response.dto.ts
+        └── entities/       # Database entities (if applicable)
 ```
 
 ### Controllers
@@ -212,6 +222,43 @@ src/
 - Create configuration modules for different environments
 - Use `.env` files with proper validation
 - Access config via `ConfigService` injection
+- **Configuration Structure:**
+  - Create `config.schema.ts` with validation using class-validator:
+    - Use `declare` keyword for properties in validation classes (not property initializers)
+    - Define enums for constrained values (e.g., `Environment`, `LogLevel`)
+    - Use `@IsEnum()`, `@IsNumber()`, `@IsString()`, `@IsOptional()` decorators
+    - Set defaults in constructor
+    - Export validation function that uses `plainToInstance` and `validateSync`
+  - Create `config.service.ts` that extends `NestConfigService<EnvironmentVariables, true>`:
+    - Provide type-safe getters for each configuration value
+    - Use type assertions: `as Type | undefined` when calling `this.get()`
+    - Provide sensible defaults in getters
+  - Create `config.module.ts`:
+    - Import `NestConfigModule.forRoot()` with `isGlobal: true`
+    - Set `envFilePath: ['.env.local', '.env']` to support local overrides
+    - Enable validation and caching
+    - Export both `NestConfigModule` and custom `ConfigService`
+- **Using Configuration in Modules:**
+  - When using `forRootAsync()` in module configuration (e.g., third-party modules):
+    - Always include both `imports: [ConfigModule]` and `inject: [ConfigService]`
+    - The `imports` makes the module available, `inject` specifies what to inject into the factory
+    - Example:
+      ```typescript
+      SomeModule.forRootAsync({
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          // configuration using configService
+        }),
+      })
+      ```
+  - In services/controllers, inject `ConfigService` via constructor injection
+  - Use the type-safe getters (e.g., `configService.port`, `configService.logLevel`) instead of raw `get()` calls
+- **Environment Variables:**
+  - Use UPPERCASE with underscores (e.g., `LOG_LEVEL`, `NODE_ENV`)
+  - Validate all environment variables in the schema
+  - Never use `process.env` directly - always use `ConfigService`
+  - Create `.env.example` file with all required variables and their defaults
 
 ### Testing
 - Use Jest framework (standard for NestJS)
@@ -259,9 +306,10 @@ src/
 - Implement rate limiting where appropriate
 
 ## Code Generation Preferences
-- When creating new modules, use NestJS CLI: `nest g module [name]`
+- When creating new modules, use NestJS CLI: `nest g module modules/[name]`
+- All feature modules should be created under the `modules/` directory
 - When creating controllers/services, follow NestJS CLI conventions
-- Use path aliases from tsconfig.json for imports (e.g., `@/core`, `@/shared`)
+- Use path aliases from tsconfig.json for imports (e.g., `@/core`, `@/shared`, `@/modules`)
 - Prefer dependency injection over static methods
 - Use decorators for metadata and cross-cutting concerns
 
