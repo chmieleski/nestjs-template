@@ -1,9 +1,18 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "../",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/src/$1",
+    "^@/core/(.*)$": "<rootDir>/src/core/$1",
+    "^@/shared/(.*)$": "<rootDir>/src/shared/$1",
+    "^@/modules/(.*)$": "<rootDir>/src/modules/$1"
+  },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(@thallesp/nestjs-better-auth|jose|@better-auth|@noble|better-auth)/)"
+  ]
 }
